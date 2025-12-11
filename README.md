@@ -114,3 +114,7 @@ The configuration file is located at: `config.json`
 | `freq`                       | string  | Time interval                                   |
 
 Time interval can be selected from `INFO`, `TICK`, `MIN1`, `MIN5`, `MIN15`, `MIN30`, `MIN60`, `MIN120`, `MIN240`, `DAY1`, `WEEK1`, `MONTH1`.
+
+# Legal Notice
+
+This project is for educational and research purposes only. Users are responsible for ensuring that their use complies with all applicable laws and the terms of service of the target website.
