@@ -1,0 +1,17 @@
+{
+    "dataserver": {
+        "port": 13200
+    },
+    "autodata": {
+        "use_dataserver": true,
+        "enable_file_output": true,
+        "data_dir": "./nanhua_data/",
+        "subscribe_tickers": [
+            {"code": "PP_NH", "freq": "MIN1"},
+            {"code": "RB_NH", "freq": "MIN1"},
+            {"code": "I_NH", "freq": "MIN1"},
+            {"code": "J_NH", "freq": "MIN1"},
+            {"code": "HC_NH", "freq": "MIN1"}
+        ]
+    }
+}

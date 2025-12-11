@@ -1,0 +1,28 @@
+{
+  "name": "nanhua-dataservice",
+  "version": "1.0.0",
+  "description": "A real-time market data acquisition and distribution service for indices from Nanhua Futures.",
+  "keywords": [
+    "NanHua"
+  ],
+  "homepage": "https://github.com/hashhashgo/NanHua-DataService#readme",
+  "bugs": {
+    "url": "https://github.com/hashhashgo/NanHua-DataService/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hashhashgo/NanHua-DataService.git"
+  },
+  "license": "MIT",
+  "author": "hashhashgo",
+  "type": "module",
+  "main": "nanhua_auto_data.js",
+  "scripts": {
+    "start": "node nanhua_auto_data.js",
+    "server": "node nanhua_dataserver.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "jsdom": "^27.3.0"
+  }
+}
