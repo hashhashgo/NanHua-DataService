@@ -1,10 +1,13 @@
 import express from 'express';
-import { getTickData, getAllData } from "./nanhua.js";
+import { getAllData, getContractBaseInfo_version_web, getContractCategory_version_web } from "./nanhua.js";
 import { fileURLToPath } from 'url';
 
 import config from "./config.json" with { type: "json" };
 
 const app = express();
+
+const contract_base_info = await getContractBaseInfo_version_web();
+const contract_category = await getContractCategory_version_web();
 
 app.get('/', (req, res) => {
   console.log(req.query);
@@ -16,6 +19,10 @@ app.get('/', (req, res) => {
   }).catch(err => {
     res.status(500).send('Error retrieving data: ' + err.message);
   });
+});
+
+app.get('/contracts', (req, res) => {
+  res.json({ base_info: contract_base_info, category: contract_category });
 });
 
 if (process.argv && process.argv.length > 1 && process.argv[1] === fileURLToPath(import.meta.url)) {

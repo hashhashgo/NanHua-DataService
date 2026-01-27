@@ -1,6 +1,5 @@
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
-import { get } from 'http';
 
 const dom = new JSDOM(`<!DOCTYPE html><p>Hello</p>`, {
     url: "https://example.com",
@@ -62,7 +61,7 @@ const {
     It: broadcastSubscribe, // namespace, callback
     zu: closeConnection,
     dq: connectStatusSubscribe, // t
-    CB: getContractBaseInfo_version_web,
+    CB: getContractBaseInfo_version_web, // all information include symbols
     BG: getContractCategory_version_web,
     SD: getKLineData, // symbol: "PP_NH", data_count: 1000, quotationFreq: "DAY1", endTime: 1764918000 | null
     sE: getTickData, // symbol: "PP_NH", infoDay: 0 -> today, 1 -> 2days, ... (max 5)
