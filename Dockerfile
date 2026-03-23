@@ -11,4 +11,4 @@ EXPOSE 13200
 
 ENV NODE_ENV=production
 
-CMD ["npm", "run", "server"]
+CMD ["npm", "run", "kafka"]

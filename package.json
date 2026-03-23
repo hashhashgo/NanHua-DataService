@@ -19,7 +19,8 @@
   "main": "nanhua_auto_data.js",
   "scripts": {
     "start": "node nanhua_auto_data.js",
-    "server": "node nanhua_dataserver.js"
+    "server": "node nanhua_dataserver.js",
+    "kafka": "node nanhua_kafka_producer.js"
   },
   "dependencies": {
     "express": "^5.2.1",
