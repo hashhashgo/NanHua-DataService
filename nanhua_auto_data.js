@@ -12,7 +12,7 @@ const dataserver_port =
     parseInt(process.argv[2]) : (config?.dataserver?.port ? config.dataserver.port : 13200);
 if ((process.argv && process.argv.length > 2) || config?.autodata?.use_dataserver) {
     dataserver.listen(dataserver_port, () => {
-        console.log(`Server is listening at http://localhost:${dataserver_port}`);
+        console.log(`Server is listening at http://0.0.0.0:${dataserver_port}`);
     });
 }
 
