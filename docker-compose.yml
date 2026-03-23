@@ -1,0 +1,9 @@
+services:
+  nanhua-data-service:
+    build: .
+    container_name: nanhua-data-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "13200:13200"
