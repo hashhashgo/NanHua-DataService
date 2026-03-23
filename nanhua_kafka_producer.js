@@ -56,6 +56,27 @@ setInterval(() => {
 
 }, FLUSH_MS);
 
+////////// utils //////////
+function flattenObject(obj, prefix = '', res = {}) {
+    for (const key in obj) {
+        if (!obj.hasOwnProperty(key)) continue;
+
+        const value = obj[key];
+        const newKey = prefix ? `${prefix}_${key}` : key;
+
+        if (
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value)
+        ) {
+            flattenObject(value, newKey, res);
+        } else {
+            res[newKey] = value;
+        }
+    }
+    return res;
+}
+
 ////////// subscribe //////////
 const subscribe_tickers = config?.kafka_producer?.subscribe_tickers ?? [ ];
 
@@ -69,7 +90,7 @@ if(subscribe_tickers.length > 0) {
         // 如果没有x.freq，是面板信息，无用
         if (x.freq) {
             x.freq = QuotationFreq[x.freq] || x.freq;
-            queue.push({ key: `${x.code}`, value: JSON.stringify(x) });
+            queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
 
             const redis_key = `nanhua_${x.code}_${x.freq}`;
             if (redis_client && !isInitializing) {
@@ -109,7 +130,7 @@ subscribe_tickers.forEach(symbol => {
         data.forEach(x => {
             if (x.freqTime > last_freqTime) {
                 x.freq = QuotationFreq[x.freq] || x.freq;
-                queue.push({ key: `${x.code}`, value: JSON.stringify(x) });
+                queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
             }
             latestFreqTime = Math.max(latestFreqTime, x.freqTime);
         });
