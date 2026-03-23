@@ -31,7 +31,7 @@ if (process.argv && process.argv.length > 1 && process.argv[1] === fileURLToPath
   else if (config.dataserver.port) port = config.dataserver.port;
   if (Number.isNaN(port)) port = 3000;
   app.listen(port, () => {
-    console.log(`Server is listening at http://0.0.0.0:${port}`);
+    console.log(`Server is listening on port ${port}`);
   });
 }
 

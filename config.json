@@ -13,5 +13,14 @@
             {"code": "J_NH", "freq": "MIN1"},
             {"code": "HC_NH", "freq": "MIN1"}
         ]
+    },
+    "kafka_producer": {
+        "use_dataserver": true,
+        "brokers": ["kafka:9092"],
+        "topic": "nanhua_market_data",
+        "clientId": "nanhua_kafka_producer",
+        "logLevel": "INFO",
+        "subscribe_tickers": ["AU_NH"],
+        "redis": "redis://valkey:6379"
     }
 }

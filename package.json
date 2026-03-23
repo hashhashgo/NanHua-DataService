@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "jsdom": "^27.3.0"
+    "jsdom": "^27.3.0",
+    "kafkajs": "^2.2.4",
+    "redis": "^5.11.0"
   }
 }
