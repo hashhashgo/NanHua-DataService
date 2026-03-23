@@ -78,14 +78,14 @@ function flattenObject(obj, prefix = '', res = {}) {
 }
 
 ////////// subscribe //////////
-const subscribe_tickers = config?.kafka_producer?.subscribe_tickers ?? [ ];
+const subscribe_tickers = new Set(config?.kafka_producer?.subscribe_tickers ?? []);
 
-var isInitializing = true;
+var initialized = new Set();
 
-if(subscribe_tickers.length > 0) {
+if(subscribe_tickers.size > 0) {
     let {
         unsubscribe
-    } = subscribe("NH", subscribe_tickers, async x => {
+    } = subscribe("NH", Array.from(subscribe_tickers), async x => {
         // 订阅会返回所有频率数据
         // 如果没有x.freq，是面板信息，无用
         if (x.freq) {
@@ -93,7 +93,7 @@ if(subscribe_tickers.length > 0) {
             queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
 
             const redis_key = `nanhua_${x.code}_${x.freq}`;
-            if (redis_client && !isInitializing) {
+            if (redis_client && x.freqTime && initialized.has(redis_key)) {
                 redis_client.set(redis_key, x.freqTime).catch(err => {
                     console.error("Failed to set Redis key", redis_key, err);
                 });
@@ -110,37 +110,41 @@ subscribe_tickers.forEach(symbol => {
 
         var data = [];
         var tempData = (await getKLineData(symbol, 500, freq, null))[0];
-        if (!tempData.quotation || tempData.quotation.length === 0) {
-            return data;
-        }
-        var earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
-        data.push(...tempData.quotation);
-        while (
-            earliestfreq > last_freqTime &&
-            (tempData = (await getKLineData(symbol, 500, freq, earliestfreq))[0]) &&
-            tempData.quotation && tempData.quotation.length > 0 &&
-            earliestfreq > tempData.quotation[tempData.quotation.length - 1].freqTime
-        ) {
-            if (earliestfreq == tempData.quotation[0].freqTime) data.push(...tempData.quotation.slice(1));
-            else data.push(...tempData.quotation);
-            earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
+        if (tempData.quotation && tempData.quotation.length > 0) {
+            var earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
+            data.push(...tempData.quotation);
+            while (
+                earliestfreq && earliestfreq > last_freqTime &&
+                (tempData = (await getKLineData(symbol, 500, freq, earliestfreq))[0]) &&
+                tempData.quotation && tempData.quotation.length > 0 &&
+                earliestfreq > tempData.quotation[tempData.quotation.length - 1].freqTime
+            ) {
+                if (earliestfreq == tempData.quotation[0].freqTime) data.push(...tempData.quotation.slice(1));
+                else data.push(...tempData.quotation);
+                earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
+            }
+
+            var latestFreqTime = null;
+            data.forEach(x => {
+                if (!x.freqTime || x.freqTime > last_freqTime) {
+                    x.freq = QuotationFreq[x.freq] || x.freq;
+                    queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
+                }
+                if (x.freqTime) latestFreqTime = Math.max(latestFreqTime ?? 0, x.freqTime);
+            });
         }
 
-        var latestFreqTime = 0;
-        data.forEach(x => {
-            if (x.freqTime > last_freqTime) {
-                x.freq = QuotationFreq[x.freq] || x.freq;
-                queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
-            }
-            latestFreqTime = Math.max(latestFreqTime, x.freqTime);
-        });
-        if (redis_client) {
+        console.info(`Initializing ${initialized.size} / ${subscribe_tickers.size * Object.values(QuotationFreq).length}: Initialized data for ${symbol} ${freq}, total ${data.length} records` + (last_freqTime ? `, last freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
+
+        if (redis_client && latestFreqTime) {
             redis_client.set(redis_key, latestFreqTime).catch(err => {
                 console.error("Failed to set Redis key", redis_key, err);
             });
         }
+
+        initialized.add(redis_key);
+        if (initialized.size === subscribe_tickers.size * Object.values(QuotationFreq).length) {
+            console.log("Initialization completed");
+        }
     });
 });
-
-isInitializing = false;
-console.log("Initialization completed");
