@@ -7,9 +7,14 @@ import { getKLineData, subscribe, QuotationFreq } from "./nanhua.js";
 const dataserver_port = config?.dataserver?.port ?? 13200;
 if (config?.kafka_producer?.use_dataserver) {
     dataserver.listen(dataserver_port, () => {
-        console.log(`Server is listening on port ${dataserver_port}`);
+        console.info(`Server is listening on port ${dataserver_port}`);
     });
 }
+
+////////// initialize database //////////
+import { initialize, backfill } from "./db.js";
+
+await initialize();
 
 ////////// redis //////////
 import { createClient as createRedisClient } from 'redis';
@@ -20,14 +25,48 @@ if (redis_client) {
     await redis_client.connect();
 }
 
+const redis_sha_insert_max = await redis_client?.scriptLoad("\
+    local current = server.call('GET', KEYS[1]);\
+    if not current or tonumber(current) < tonumber(ARGV[1]) then\
+        server.call('SET', KEYS[1], ARGV[1]);\
+        return ARGV[1];\
+    end;\
+    return current;")
+const redis_insert_max = (!redis_client || !redis_sha_insert_max) ? undefined : async (client, key, value) => {
+    if (typeof key !== 'string' || typeof value !== 'number') {
+        throw new Error('Invalid key or value type for redis_insert_max');
+    }
+    return Number.parseInt(await client.evalSha(redis_sha_insert_max, {
+        keys: [key],
+        arguments: [value.toString()]
+    }))
+};
+
 ////////// kafka producer //////////
 import { Kafka, logLevel } from 'kafkajs';
+
+const TOPIC = config?.kafka_producer?.topic ?? "nanhua_market_data";
 
 const kafka = new Kafka({
   clientId: config?.kafka_producer?.clientId ?? 'quotes-service',
   brokers: config?.kafka_producer?.brokers ?? ['kafka:9092'],
   logLevel: config?.kafka_producer?.logLevel ? logLevel[config.kafka_producer.logLevel] : logLevel.WARN,
 });
+
+const kafka_admin = kafka.admin();
+await kafka_admin.connect();
+if (!(await kafka_admin.listTopics()).includes(TOPIC)) {
+    await kafka_admin.createTopics({
+        topics: [
+            {
+            topic: TOPIC,
+            numPartitions: 4,
+            replicationFactor: 1,
+            },
+        ],
+    });
+}
+kafka_admin.disconnect();
 
 const kafka_producer = kafka.producer({
     allowAutoTopicCreation: true,
@@ -37,7 +76,6 @@ await kafka_producer.connect();
 
 ////////// queue and forward to kafka //////////
 const queue = [];
-const TOPIC = config?.kafka_producer?.topic ?? "nanhua_market_data";
 const FLUSH_MS = 20;
 const MAX_BATCH = 500;
 
@@ -94,7 +132,7 @@ if(subscribe_tickers.size > 0) {
 
             const redis_key = `nanhua_${x.code}_${x.freq}`;
             if (redis_client && x.freqTime && initialized.has(redis_key)) {
-                redis_client.set(redis_key, x.freqTime).catch(err => {
+                redis_insert_max(redis_client, redis_key, x.freqTime).catch(err => {
                     console.error("Failed to set Redis key", redis_key, err);
                 });
             }
@@ -103,6 +141,7 @@ if(subscribe_tickers.size > 0) {
 }
 
 ////////// initialize data //////////
+const all_data = [];
 subscribe_tickers.forEach(symbol => {
     Object.values(QuotationFreq).forEach(async freq => {
         const redis_key = `nanhua_${symbol}_${freq}`;
@@ -128,23 +167,28 @@ subscribe_tickers.forEach(symbol => {
             data.forEach(x => {
                 if (!x.freqTime || x.freqTime > last_freqTime) {
                     x.freq = QuotationFreq[x.freq] || x.freq;
-                    queue.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
+                    all_data.push({ key: `${x.code}`, value: JSON.stringify(flattenObject(x)) });
                 }
                 if (x.freqTime) latestFreqTime = Math.max(latestFreqTime ?? 0, x.freqTime);
             });
         }
 
-        console.info(`Initializing ${initialized.size} / ${subscribe_tickers.size * Object.values(QuotationFreq).length}: Initialized data for ${symbol} ${freq}, total ${data.length} records` + (last_freqTime ? `, last freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
+        console.info(`Initializing ${initialized.size} / ${subscribe_tickers.size * Object.values(QuotationFreq).length}: ` + 
+            `Initialized data for ${symbol} ${freq}, total ${data.length} records` +
+            `, time range: ${data.length > 0 ? new Date(data[data.length - 1].quoteTime).toISOString() : 'N/A'} - ${data.length > 0 ? new Date(data[0].quoteTime).toISOString() : 'N/A'}` +
+            (last_freqTime ? `, last freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
 
         if (redis_client && latestFreqTime) {
-            redis_client.set(redis_key, latestFreqTime).catch(err => {
+            redis_insert_max(redis_client, redis_key, latestFreqTime).catch(err => {
                 console.error("Failed to set Redis key", redis_key, err);
             });
         }
 
         initialized.add(redis_key);
         if (initialized.size === subscribe_tickers.size * Object.values(QuotationFreq).length) {
-            console.log("Initialization completed");
+            console.info("All initial data loaded, backfilling to database...");
+            await backfill(all_data);
+            console.info("Initialization completed");
         }
     });
 });

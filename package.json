@@ -16,7 +16,7 @@
   "license": "MIT",
   "author": "hashhashgo",
   "type": "module",
-  "main": "nanhua_auto_data.js",
+  "main": "nanhua_dataserver.js",
   "scripts": {
     "start": "node nanhua_auto_data.js",
     "server": "node nanhua_dataserver.js",
