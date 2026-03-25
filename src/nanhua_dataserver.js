@@ -2,7 +2,7 @@ import express from 'express';
 import { getAllData, getContractBaseInfo_version_web, getContractCategory_version_web } from "./nanhua.js";
 import { fileURLToPath } from 'url';
 
-import config from "./config.json" with { type: "json" };
+import config from "../config.json" with { type: "json" };
 
 const app = express();
 

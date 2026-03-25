@@ -1,0 +1,32 @@
+/*
+This file is used to publish data.
+
+You should export two functions:
+- `initialize`: to initialize the database, create tables, etc.
+- `backfill`: to backfill historical data, which will be called after `initialize`.
+- `publish`: to publish real-time data, which will be called for each new data point.
+
+**Note**
+If using databases like ClickHouse, you cannot insert history data directly,
+because tables are usually partitioned by date, and inserting history data may cause 
+"Too many partitions for single INSERT block (more than 100)" error.
+Therefore, there is a separate `backfill` function to handle historical data, and you can insert them into the database in batches.
+For real-time data, you can implement the `publish` function to insert data into the database immediately when new data arrives.
+*/
+
+export async function initialize() {
+    // Initialize the database, create tables, etc.
+    console.log("Database initialized");
+}
+
+export async function backfill(data) {
+    // Backfill historical data, which will be called after `initialize`.
+    // The `data` parameter is an array of historical data, you can insert them into the database in batches.
+    console.log(`Backfilling ${data.length} records`);
+}
+
+export async function publish(data) {
+    // Publish real-time data, which will be called for each new data point.
+    // The `data` parameter is a single data point, you can insert it into the database immediately.
+    console.log("Publishing data:", data);
+}

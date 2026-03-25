@@ -16,13 +16,13 @@
   "license": "MIT",
   "author": "hashhashgo",
   "type": "module",
-  "main": "nanhua_dataserver.js",
   "scripts": {
-    "start": "node nanhua_auto_data.js",
-    "server": "node nanhua_dataserver.js",
-    "kafka": "node nanhua_kafka_producer.js"
+    "start": "node src/nanhua_auto_data.js",
+    "server": "node src/nanhua_dataserver.js",
+    "producer": "node src/nanhua_producer.js"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.18.2",
     "express": "^5.2.1",
     "jsdom": "^27.3.0",
     "kafkajs": "^2.2.4",

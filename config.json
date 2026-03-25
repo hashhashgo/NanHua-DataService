@@ -14,13 +14,21 @@
             {"code": "HC_NH", "freq": "MIN1"}
         ]
     },
-    "kafka_producer": {
+    "producer": {
         "use_dataserver": true,
-        "brokers": ["kafka:9092"],
-        "topic": "nanhua_market_data",
-        "clientId": "nanhua_kafka_producer",
-        "logLevel": "INFO",
-        "subscribe_tickers": ["AU_NH"],
-        "redis": "redis://valkey:6379"
+        "redis": "redis://valkey:6379",
+        "subscribe_tickers": ["AU_NH"]
+    },
+    "publisher": {
+        "kafka": {
+            "brokers": ["kafka:9092"],
+            "topic": "nanhua_market_data",
+            "clientId": "nanhua_kafka_producer",
+            "logLevel": "INFO"
+        },
+        "clickhouse": {
+            "url": "http://clickhouse:8123",
+            "database": "market"
+        }
     }
 }
