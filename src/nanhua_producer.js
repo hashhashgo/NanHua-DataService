@@ -105,7 +105,7 @@ subscribe_tickers.forEach(symbol => {
             console.info(`Initializing ${initialized.size} / ${subscribe_tickers.size * Object.values(QuotationFreq).length}: ` + 
                 `Initialized data for ${symbol} ${freq}, total ${data.length} records` +
                 `, time range: ${data.length > 0 ? new Date(data[data.length - 1].quoteTime).toISOString() : 'N/A'} - ${data.length > 0 ? new Date(data[0].quoteTime).toISOString() : 'N/A'}` +
-                (last_freqTime ? `, last freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
+                (latestFreqTime ? `, latest freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
 
             if (redis_client && latestFreqTime) {
                 redis_insert_max(redis_client, redis_key, latestFreqTime).catch(err => {

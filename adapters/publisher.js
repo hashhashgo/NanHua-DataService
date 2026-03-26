@@ -230,10 +230,10 @@ export async function backfill(rows) {
             case "TICK": {
                 data.symbol = row.code;
                 data.timestamp = row.quoteTime;
-                data.last_price = row.rt_last;
-                data.tag = row.rt_tag;
-                data.posi_delta = row.rt_posiDelta;
-                data.tick_volume = row.rt_tickVolume;
+                data.last_price = row.rt.last;
+                data.tag = row.rt.tag;
+                data.posi_delta = row.rt.posiDelta;
+                data.tick_volume = row.rt.tickVolume;
                 break;
             }
             case "INFO": break; // no need to backfill INFO data
