@@ -22,8 +22,8 @@
     "publisher": {
         "kafka": {
             "brokers": ["kafka:9092"],
-            "topic": "nanhua_market_data",
-            "clientId": "nanhua_kafka_producer",
+            "topic": "nanhua_index_data",
+            "clientId": "nanhua_index_kafka_producer",
             "logLevel": "INFO"
         },
         "clickhouse": {

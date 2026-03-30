@@ -20,7 +20,7 @@ import config from "../config.json" with { type: "json" };
 import { Kafka, logLevel } from 'kafkajs';
 
 const BROKERS = config?.publisher?.kafka?.brokers ?? ['kafka:9092'];
-const TOPIC = config?.publisher?.kafka?.topic ?? "nanhua_market_data";
+const TOPIC = config?.publisher?.kafka?.topic ?? "nanhua_index_data";
 
 const kafka = new Kafka({
   clientId: config?.publisher?.kafka?.clientId ?? 'quotes-service',
@@ -90,7 +90,7 @@ async function clickhouse_command(command) {
 async function clickhouse_create_table_by_freq(freq, partition_by = "toYYYYMM(timestamp)") {
     const freq_ = freq.toLowerCase();
     await clickhouse_command(`
-CREATE TABLE IF NOT EXISTS ${database}.nanhua_${freq_}
+CREATE TABLE IF NOT EXISTS ${database}.nanhua_index_${freq_}
 (
     symbol LowCardinality(String),
     timestamp DateTime64(3, 'UTC'),
@@ -107,8 +107,8 @@ ENGINE = ReplacingMergeTree
 PARTITION BY ${partition_by}
 ORDER BY (symbol, timestamp);`);
     await clickhouse_command(`
-CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_to_${freq_}
-TO ${database}.nanhua_${freq_}
+CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_index_to_${freq_}
+TO ${database}.nanhua_index_${freq_}
 AS
 SELECT
     JSONExtractString(raw, 'code') AS symbol,
@@ -121,7 +121,7 @@ SELECT
     JSONExtract(raw, 'turnOver', 'Float32') AS amount,
     JSONExtract(raw, 'posi', 'Int32') AS open_interest,
     JSONExtractFloat(raw, 'preClose') AS pre_close
-FROM ${database}.nanhua_kafka
+FROM ${database}.nanhua_index_kafka
 WHERE JSONExtractString(raw, 'freq') = '${freq_.toUpperCase()}';`);
 }
 
@@ -151,7 +151,7 @@ export async function initialize() {
     // Initialize the database, create tables, etc.
     await clickhouse_command(`CREATE DATABASE IF NOT EXISTS ${database}`);
     await clickhouse_command(`
-CREATE TABLE IF NOT EXISTS ${database}.nanhua_kafka
+CREATE TABLE IF NOT EXISTS ${database}.nanhua_index_kafka
 (
     raw String
 )
@@ -159,11 +159,11 @@ ENGINE = Kafka
 SETTINGS
     kafka_broker_list = '` + BROKERS.join(',') + `',
     kafka_topic_list = '` + TOPIC + `',
-    kafka_group_name = 'clickhouse_market_nanhua_v1',
+    kafka_group_name = 'clickhouse_market_nanhua_index_v1',
     kafka_format = 'JSONAsString',
     kafka_num_consumers = 4;`);
     await clickhouse_command(`
-CREATE TABLE IF NOT EXISTS ${database}.nanhua_raw_archive
+CREATE TABLE IF NOT EXISTS ${database}.nanhua_index_raw_archive
 (
     ingest_time DateTime DEFAULT now(),
     raw String
@@ -172,13 +172,13 @@ ENGINE = MergeTree
 PARTITION BY toYYYYMM(ingest_time)
 ORDER BY ingest_time;`);
     await clickhouse_command(`
-CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_raw_archive
-TO ${database}.nanhua_raw_archive
+CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_index_raw_archive
+TO ${database}.nanhua_index_raw_archive
 AS
 SELECT raw
-FROM ${database}.nanhua_kafka;`);
+FROM ${database}.nanhua_index_kafka;`);
     await clickhouse_command(`
-CREATE TABLE IF NOT EXISTS ${database}.nanhua_tick
+CREATE TABLE IF NOT EXISTS ${database}.nanhua_index_tick
 (
     symbol LowCardinality(String),
     timestamp DateTime64(3, 'UTC'),
@@ -191,8 +191,8 @@ ENGINE = ReplacingMergeTree
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (symbol, timestamp);`);
     await clickhouse_command(`
-CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_to_tick
-TO ${database}.nanhua_tick
+CREATE MATERIALIZED VIEW IF NOT EXISTS ${database}.mv_nanhua_index_to_tick
+TO ${database}.nanhua_index_tick
 AS
 SELECT
     JSONExtractString(raw, 'code') AS symbol,
@@ -201,7 +201,7 @@ SELECT
     JSONExtract(raw, 'rt_tag', 'UInt8') AS tag,
     JSONExtract(raw, 'rt_posiDelta', 'Int32') AS posi_delta,
     JSONExtract(raw, 'rt_tickVolume', 'Int32') AS tick_volume
-FROM ${database}.nanhua_kafka
+FROM ${database}.nanhua_index_kafka
 WHERE JSONExtractString(raw, 'freq') = 'TICK';`);
     await clickhouse_create_table_by_freq("min1");
     await clickhouse_create_table_by_freq("min5");
@@ -262,7 +262,7 @@ export async function backfill(rows) {
     for (const bucketKey in buckets) {
         for (const freq in buckets[bucketKey]) {
             promises.push(clickhouse_client.insert({
-                table: `${database}.nanhua_${freq.toLocaleLowerCase()}`,
+                table: `${database}.nanhua_index_${freq.toLocaleLowerCase()}`,
                 values: buckets[bucketKey][freq],
                 format: 'JSONEachRow'
             }));
