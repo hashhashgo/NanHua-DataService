@@ -28,7 +28,8 @@
         },
         "clickhouse": {
             "url": "http://clickhouse:8123",
-            "database": "market"
+            "database": "market",
+            "meta_database": "market_meta"
         }
     }
 }

@@ -79,6 +79,7 @@ const clickhouse_client = createClient({
 });
 
 const database = config?.publisher?.clickhouse?.database ?? "default";
+const meta_database = config?.publisher?.clickhouse?.meta_database ?? "meta";
 async function clickhouse_command(command) {
     return await clickhouse_client.command({
         query: command,
@@ -213,6 +214,46 @@ WHERE JSONExtractString(raw, 'freq') = 'TICK';`);
     await clickhouse_create_table_by_freq("day1");
     await clickhouse_create_table_by_freq("week1", "toYear(timestamp)");
     await clickhouse_create_table_by_freq("month1", "toYear(timestamp)");
+
+    await clickhouse_command(`CREATE DATABASE IF NOT EXISTS ${meta_database}`);
+    await clickhouse_command(`CREATE TABLE IF NOT EXISTS ${meta_database}.nanhua_index_meta
+        (
+            cy String,
+            code LowCardinality(String),
+            name String,
+            open Date,
+            posi Int32,
+            prcs Int32,
+            prop Int32,
+            type Int32,
+            unit Int32,
+            cunit Float32,
+            gname String,
+            group String,
+            mcode String,
+            mname String,
+            night Int32,
+            sname String,
+            trade Int32,
+            expire Date,
+            margin Float32,
+            market String,
+            octime String,
+            option Int32,
+            ordern Int32,
+            hidevol Int32,
+            hidetick Int32
+        )
+        ENGINE = ReplacingMergeTree
+        ORDER BY (code);`);
+
+    const { getContractBaseInfo_version_web } = await import("../src/nanhua.js");
+    const contract_base_info = await getContractBaseInfo_version_web();
+    await clickhouse_client.insert({
+        table: `${meta_database}.nanhua_index_meta`,
+        values: contract_base_info.codes,
+        format: 'JSONEachRow'
+    });
 
     console.info("Database initialized");
 }
