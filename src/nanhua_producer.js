@@ -58,8 +58,8 @@ if(subscribe_tickers.size > 0) {
             await publish(x);
 
             const redis_key = `nanhua_${x.code}_${x.freq}`;
-            if (redis_client && x.freqTime && initialized.has(redis_key)) {
-                redis_insert_max(redis_client, redis_key, x.freqTime).catch(err => {
+            if (redis_client && x.quoteTime && initialized.has(redis_key)) {
+                redis_insert_max(redis_client, redis_key, x.quoteTime).catch(err => {
                     console.error("Failed to set Redis key", redis_key, err);
                 });
             }
@@ -74,41 +74,41 @@ subscribe_tickers.forEach(symbol => {
     Object.values(QuotationFreq).forEach(freq => {
         promises.push((async freq => {
             const redis_key = `nanhua_${symbol}_${freq}`;
-            const last_freqTime = (await redis_client?.get(redis_key)) ?? 0;
+            const last_quoteTime = (await redis_client?.get(redis_key)) ?? 0;
 
             var data = [];
             var tempData = (await getKLineData(symbol, 500, freq, null))[0];
             if (tempData.quotation && tempData.quotation.length > 0) {
-                var earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
+                var earliestQuoteTime = tempData.quotation[tempData.quotation.length - 1].quoteTime;
                 data.push(...tempData.quotation);
                 while (
-                    earliestfreq && earliestfreq > last_freqTime &&
-                    (tempData = (await getKLineData(symbol, 500, freq, earliestfreq))[0]) &&
+                    earliestQuoteTime && earliestQuoteTime > last_quoteTime &&
+                    (tempData = (await getKLineData(symbol, 500, freq, tempData.quotation[tempData.quotation.length - 1].freqTime))[0]) &&
                     tempData.quotation && tempData.quotation.length > 0 &&
-                    earliestfreq > tempData.quotation[tempData.quotation.length - 1].freqTime
+                    earliestQuoteTime > tempData.quotation[tempData.quotation.length - 1].quoteTime
                 ) {
-                    if (earliestfreq == tempData.quotation[0].freqTime) data.push(...tempData.quotation.slice(1));
+                    if (earliestQuoteTime == tempData.quotation[0].quoteTime) data.push(...tempData.quotation.slice(1));
                     else data.push(...tempData.quotation);
-                    earliestfreq = tempData.quotation[tempData.quotation.length - 1].freqTime;
+                    earliestQuoteTime = tempData.quotation[tempData.quotation.length - 1].quoteTime;
                 }
 
-                var latestFreqTime = null;
+                var latestQuoteTime = null;
                 data.forEach(x => {
-                    if (!x.freqTime || x.freqTime > last_freqTime) {
+                    if (!x.quoteTime || x.quoteTime > last_quoteTime) {
                         x.freq = QuotationFreq[x.freq] || x.freq;
                         all_data.push(x);
                     }
-                    if (x.freqTime) latestFreqTime = Math.max(latestFreqTime ?? 0, x.freqTime);
+                    if (x.quoteTime) latestQuoteTime = Math.max(latestQuoteTime ?? 0, x.quoteTime);
                 });
             }
 
             console.info(`Initializing ${initialized.size} / ${subscribe_tickers.size * Object.values(QuotationFreq).length}: ` + 
                 `Initialized data for ${symbol} ${freq}, total ${data.length} records` +
                 `, time range: ${data.length > 0 ? new Date(data[data.length - 1].quoteTime).toISOString() : 'N/A'} - ${data.length > 0 ? new Date(data[0].quoteTime).toISOString() : 'N/A'}` +
-                (latestFreqTime ? `, latest freqTime: ${new Date(latestFreqTime * 1000 ?? 0).toISOString()}` : ''));
+                (latestQuoteTime ? `, latest quoteTime: ${new Date(latestQuoteTime ?? 0).toISOString()}` : ''));
 
-            if (redis_client && latestFreqTime) {
-                redis_insert_max(redis_client, redis_key, latestFreqTime).catch(err => {
+            if (redis_client && latestQuoteTime) {
+                redis_insert_max(redis_client, redis_key, latestQuoteTime).catch(err => {
                     console.error("Failed to set Redis key", redis_key, err);
                 });
             }
