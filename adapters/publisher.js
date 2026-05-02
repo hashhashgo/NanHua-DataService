@@ -76,6 +76,10 @@ const clickhouse_client = createClient({
     url: config?.publisher?.clickhouse?.url ?? 'http://clickhouse:8123',
     username: process.env.CLICKHOUSE_USER ?? 'default',
     password: process.env.CLICKHOUSE_PASSWORD ?? '',
+    clickhouse_settings: {
+        async_insert: 0,
+        wait_for_async_insert: 0,
+    }
 });
 
 const database = config?.publisher?.clickhouse?.database ?? "default";
